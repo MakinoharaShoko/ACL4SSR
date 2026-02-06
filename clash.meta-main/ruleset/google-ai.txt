@@ -1,0 +1,13 @@
+payload:
+  - '+.googleapis.com'
+  - '+.gemini.google.com'
+  - '+.bard.google.com'
+  - '+.aistudio.google.com'
+  - '+.notebooklm.google.com'
+  - '+.jules.google.com'
+  - '+.withgoogle.com'
+  - '+.labs.google'
+  - '+.ai.google.dev'
+  - '+.clients6.google.com'
+  - '+.generativelanguage.googleapis.com'
+

@@ -1,0 +1,6 @@
+payload:
+  - "+.openai.com"
+  - "+.chatgpt.com"
+  - "+.oaiusercontent.com"
+  - "+.oaistatic.com"
+  - "openaiapi-site.azureedge.net" 

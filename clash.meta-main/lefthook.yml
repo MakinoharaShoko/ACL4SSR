@@ -1,0 +1,6 @@
+pre-commit:
+  commands:
+    lint:
+      glob: "config.yaml"
+      run: make lint
+      stage_fixed: true

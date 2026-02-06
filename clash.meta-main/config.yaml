@@ -1,0 +1,138 @@
+# === 基础设置 ===
+mixed-port: 7890
+allow-lan: false
+mode: rule
+external-controller: 127.0.0.1:9090
+profile: { store-selected: true, store-fake-ip: true }
+
+# === DNS ===
+dns:
+  enable: true
+  listen: 127.0.0.1:53
+  ipv6: true
+  enhanced-mode: fake-ip
+  fake-ip-range: 198.18.0.1/16
+  fake-ip-range-v6: fc00::/18
+  fake-ip-filter: ["geosite:category-games", "*.lan", "*.local", "+.msftncsi.com", "+.msftconnecttest.com", "+.ntp.org.cn", "+.pool.ntp.org"]
+  respect-rules: true
+  cache-algorithm: arc
+  default-nameserver: [223.5.5.5, 119.29.29.29]
+  nameserver: [https://doh.pub/dns-query, https://dns.alidns.com/dns-query]
+  proxy-server-nameserver: [https://doh.pub/dns-query, https://dns.alidns.com/dns-query]
+  nameserver-policy: { "geosite:category-ads-all": rcode://success, "geosite:cn,private,apple,microsoft,onedrive": [https://doh.pub/dns-query, https://dns.alidns.com/dns-query] }
+
+# === TUN ===
+tun: { enable: true, stack: mixed, dns-hijack: [any:53], auto-route: true, auto-detect-interface: true, mtu: 9000, strict-route: true, endpoint-independent-nat: true, udp-timeout: 300 }
+
+# === Sniffer ===
+sniffer:
+  enable: true
+  parse-pure-ip: true
+  force-dns-mapping: true
+  override-destination: true
+  sniff: { HTTP: { ports: [80, 8080-8880], override-destination: true }, TLS: { ports: [443, 8443] }, QUIC: { ports: [443] } }
+  skip-domain: ["localhost", "*.local", "+.push.apple.com", "+.apple.com", "+.icloud.com", "Mijia Cloud", "dlg.io.mi.com"]
+  skip-dst-address: ["127.0.0.0/8", "91.105.192.0/23", "91.108.4.0/22", "91.108.8.0/21", "91.108.16.0/21", "91.108.56.0/22", "95.161.64.0/20", "149.154.160.0/20", "185.76.151.0/24", "2001:67c:4e8::/48", "2001:b28:f23c::/47", "2001:b28:f23f::/48", "2a0a:f280:203::/48"]
+
+# === GEO 数据源 ===
+geo-auto-update: true
+geo-update-interval: 24
+geodata-mode: true
+geox-url: { geoip: "https://github.com/MetaCubeX/meta-rules-dat/releases/download/latest/geoip-lite.dat", geosite: "https://github.com/MetaCubeX/meta-rules-dat/releases/download/latest/geosite.dat", asn: "https://github.com/MetaCubeX/meta-rules-dat/releases/download/latest/GeoLite2-ASN.mmdb" }
+
+# === 性能优化 ===
+tcp-concurrent: true
+unified-delay: true
+find-process-mode: strict
+keep-alive-interval: 1800
+global-client-fingerprint: random
+
+# === 节点 ===
+pss: &pss { type: ss, port: 19085, cipher: aes-256-gcm, password: zCvwrYPFXbEJPgJG, udp: true }
+pvm: &pvm { type: vmess, port: 19085, uuid: 491e5d19-2e50-47dc-b3ae-6232b20419eb, alterId: 0, cipher: auto, udp: true }
+proxies:
+  - { name: HZ, type: vless, server: 101.37.172.77, port: 443, uuid: c59ea356-7a6a-4208-afc4-d476c04f6fed, network: tcp, tls: true, udp: true, flow: xtls-rprx-vision, servername: www.microsoft.com, reality-opts: { public-key: BiAryfOV6CBmgnLJAPo4MbZwMGQPgRKA6VN_MluONTc, short-id: "" } }
+  - { name: US1, <<: *pss, server: c73s1.portablesubmarines.com }
+  - { name: US2, <<: *pss, server: c73s2.portablesubmarines.com }
+  - { name: US3, <<: *pvm, server: c73s3.portablesubmarines.com }
+  - { name: JP,  <<: *pvm, server: c73s4.portablesubmarines.com }
+  - { name: EU,  <<: *pvm, server: c73s5.portablesubmarines.com }
+  - { name: FREE, <<: *pvm, server: c73s801.portablesubmarines.com }
+
+# === 订阅 ===
+# DOG 过期时间 2026-08-20，过期后需要找新订阅或改用 FREE 节点
+pp: &pp { type: http, interval: 21600, udp: true }
+proxy-providers:
+  DOG: { <<: *pp, url: "https://a512af57b689d5785650e884e792f79d.r7kq-2nfa-hg9x-bt4m-y3pw.sbs/s?t=a512af57b689d5785650e884e792f79d.jpg", path: ./proxy_providers/DOG.yaml }
+
+# === 策略组 ===
+proxy-groups:
+  - { name: PROXY,   type: url-test, url: http://cp.cloudflare.com/generate_204, interval: 300, tolerance: 50, proxies: [JP, US1, US2, US3] }
+  - { name: COPILOT, type: load-balance, strategy: round-robin, url: http://cp.cloudflare.com/generate_204, interval: 300, proxies: [US1, US2, US3, EU, FREE] }
+  - { name: JUNK,    type: url-test, url: http://cp.cloudflare.com/generate_204, interval: 300, tolerance: 100, use: [DOG] }
+
+# === 规则集 ===
+rp-http: &rp-http { type: http, interval: 86400, timeout: 120, format: yaml }
+rp-file: &rp-file { type: file, format: text, behavior: domain }
+rule-providers:
+  anthropic:    { <<: *rp-file, path: ./ruleset/anthropic.txt }
+  google-ai:    { <<: *rp-file, path: ./ruleset/google-ai.txt }
+  no-hk:        { <<: *rp-file, path: ./ruleset/no-hk.txt }
+  openai:       { <<: *rp-file, path: ./ruleset/openai.txt }
+  stripe:       { <<: *rp-file, path: ./ruleset/stripe.txt }
+  applications: { <<: *rp-http, behavior: classical, url: https://raw.githubusercontent.com/Loyalsoldier/clash-rules/release/applications.txt, path: ./ruleset/applications.yaml }
+  docker:       { <<: *rp-http, format: text, behavior: classical, url: https://cdn.jsdelivr.net/gh/ACL4SSR/ACL4SSR@master/Clash/Ruleset/Docker.list, path: ./ruleset/docker.yaml }
+  gamedl:       { <<: *rp-http, format: text, behavior: classical, url: https://cdn.jsdelivr.net/gh/ACL4SSR/ACL4SSR@master/Clash/Ruleset/GameDownload.list, path: ./ruleset/gamedl.yaml }
+  steamcn:      { <<: *rp-http, format: text, behavior: domain, url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/SteamCN/SteamCN.list, path: ./ruleset/steamcn.yaml }
+  download:     { <<: *rp-http, format: text, behavior: classical, url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Download/Download.list, path: ./ruleset/download.yaml }
+  combined-reject: { type: file, format: mrs, behavior: domain, path: ./ruleset/combined-reject.mrs }
+
+# === 规则 ===
+rules:
+  # 固定出口 IP
+  - DOMAIN-SUFFIX,dynadot.com,HZ
+  - DOMAIN-SUFFIX,servicewechat.com,HZ
+  # 大流量
+  - RULE-SET,download,JUNK
+  - RULE-SET,gamedl,JUNK
+  - RULE-SET,docker,JUNK
+  - PROCESS-NAME,rclone,JUNK
+  - DOMAIN-SUFFIX,download.calibre-ebook.com,JUNK
+  - DOMAIN-SUFFIX,githubcopilot.com,COPILOT
+  # Steam 国内
+  - RULE-SET,steamcn,DIRECT
+  # Blizzard
+  - DOMAIN,telemetry-in.battle.net,REJECT-DROP
+  - PROCESS-NAME,Heroes,EU
+  - PROCESS-NAME,HeroesSwitcher,EU
+  - DOMAIN-SUFFIX,battlenet.com.cn,DIRECT
+  - DOMAIN-SUFFIX,blzstatic.cn,DIRECT
+  - DOMAIN-SUFFIX,necdn.leihuo.netease.com,DIRECT
+  - DOMAIN-SUFFIX,battle.net,EU
+  - DOMAIN-SUFFIX,blizzard.com,EU
+  # AI
+  - RULE-SET,openai,JP
+  - RULE-SET,google-ai,US3
+  - RULE-SET,anthropic,US3
+  - RULE-SET,stripe,US3
+  - RULE-SET,no-hk,US3
+  # Custom
+  - DOMAIN,sccl.bibliocommons.com,US3
+  - DOMAIN-SUFFIX,sentry.io,REJECT-DROP
+  - DOMAIN,analytics.immersivetranslate.com,REJECT-DROP
+  - DOMAIN,default.exp-tas.com,REJECT-DROP
+  # Security
+  - RULE-SET,combined-reject,REJECT-DROP
+  - GEOSITE,category-ads-all,REJECT-DROP
+  # Final
+  - RULE-SET,applications,DIRECT
+  - GEOSITE,private,DIRECT
+  - GEOSITE,apple,DIRECT
+  - GEOSITE,google,PROXY
+  - GEOSITE,geolocation-!cn,PROXY
+  - GEOSITE,cn,DIRECT
+  - GEOIP,private,DIRECT,no-resolve
+  - GEOIP,telegram,PROXY
+  - GEOIP,LAN,DIRECT
+  - GEOIP,CN,DIRECT
+  - MATCH,PROXY

@@ -1,0 +1,21 @@
+cache.db
+probe.db
+country.mmdb
+geoip.dat
+geosite.dat
+
+proxy_providers/
+# ruleset/ 大部分忽略，但保留本地维护的规则
+ruleset/*
+!ruleset/anthropic.txt
+!ruleset/google-ai.txt
+!ruleset/no-hk.txt
+!ruleset/openai.txt
+!ruleset/stripe.txt
+logs/
+*.tmp
+
+.direnv
+
+ui
+__pycache__/

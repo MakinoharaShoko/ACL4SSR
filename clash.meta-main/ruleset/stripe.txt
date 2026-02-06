@@ -1,0 +1,5 @@
+payload:
+  - "+.stripe.com"
+  - "+.stripecdn.com"
+  - "+.stripe.network"
+  - "hcaptcha.com"
